@@ -16,6 +16,8 @@
 		7CCF0541279C28AD00BA2C93 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 7CCF0540279C28AD00BA2C93 /* Alamofire */; };
 		7CCF0544279C28E000BA2C93 /* AlamofireImage in Frameworks */ = {isa = PBXBuildFile; productRef = 7CCF0543279C28E000BA2C93 /* AlamofireImage */; };
 		7CCF0546279C847900BA2C93 /* droppablePin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF0545279C847900BA2C93 /* droppablePin.swift */; };
+		7CCF0548279D75C500BA2C93 /* PhotoCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF0547279D75C500BA2C93 /* PhotoCell.swift */; };
+		7CCF054A279DA03200BA2C93 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF0549279DA03200BA2C93 /* Constants.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +30,8 @@
 		7CCF0535279C230B00BA2C93 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		7CCF0537279C230B00BA2C93 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7CCF0545279C847900BA2C93 /* droppablePin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = droppablePin.swift; sourceTree = "<group>"; };
+		7CCF0547279D75C500BA2C93 /* PhotoCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoCell.swift; sourceTree = "<group>"; };
+		7CCF0549279DA03200BA2C93 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				7CCF0529279C230800BA2C93 /* AppDelegate.swift */,
+				7CCF0549279DA03200BA2C93 /* Constants.swift */,
 				7CCF052B279C230800BA2C93 /* SceneDelegate.swift */,
 				7CCF053E279C232400BA2C93 /* Controller */,
 				7CCF053D279C231600BA2C93 /* View */,
@@ -78,6 +83,7 @@
 			children = (
 				7CCF052F279C230800BA2C93 /* Main.storyboard */,
 				7CCF0545279C847900BA2C93 /* droppablePin.swift */,
+				7CCF0547279D75C500BA2C93 /* PhotoCell.swift */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -170,9 +176,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				7CCF052E279C230800BA2C93 /* MapVC.swift in Sources */,
+				7CCF0548279D75C500BA2C93 /* PhotoCell.swift in Sources */,
 				7CCF0546279C847900BA2C93 /* droppablePin.swift in Sources */,
 				7CCF052A279C230800BA2C93 /* AppDelegate.swift in Sources */,
 				7CCF052C279C230800BA2C93 /* SceneDelegate.swift in Sources */,
+				7CCF054A279DA03200BA2C93 /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

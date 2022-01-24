@@ -8,8 +8,12 @@
 import UIKit
 import MapKit
 import CoreLocation
+import Alamofire
+import AlamofireImage
 
 class MapVC: UIViewController, UIGestureRecognizerDelegate {
+
+    
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var mapViewBottomConstrain : NSLayoutConstraint!
     @IBOutlet weak var pullUpView : UIView!
@@ -24,7 +28,9 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
     let flowLayout = UICollectionViewFlowLayout()
     var collectionView:UICollectionView?
     
+    var imageUrlArray = [String] ()
     
+  
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,7 +39,11 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         configureLocationServises()
         pinAddGesture()
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: flowLayout)
-        // Do any additional setup after loading the view.
+        collectionView?.register(PhotoCell.self , forCellWithReuseIdentifier: "photoCell")
+        collectionView?.delegate = self
+        collectionView?.dataSource = self
+        collectionView?.backgroundColor = .green
+        pullUpView.addSubview(collectionView!)
     }
 
     func pinAddGesture () {
@@ -67,7 +77,7 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         spinner.center = CGPoint(x: (screenSize.width / 2) - (spinner.frame.width / 2), y: 125)
         spinner.color = .gray
         spinner.startAnimating()
-        pullUpView.addSubview(spinner)
+        collectionView?.addSubview(spinner)
     }
     func removeSpinner () {
         if spinner != nil {
@@ -81,7 +91,7 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         progressLabel.textColor = UIColor.label
         progressLabel.textAlignment = .center
         progressLabel.text = "Loading Images!"
-        pullUpView.addSubview(progressLabel)
+        collectionView?.addSubview(progressLabel)
     }
     
     @IBAction func centerMapBtn(_ sender: UIButton) {
@@ -101,6 +111,7 @@ extension MapVC : MKMapViewDelegate {
         removeProgressLbl()
         removeSpinner()
         
+        
         animateViewUp()
         addSwipe()
         addSpinner()
@@ -109,8 +120,13 @@ extension MapVC : MKMapViewDelegate {
         let touchCoordinate = mapView.convert(touchPoint, toCoordinateFrom: mapView)
         let annotation = droppablePin(coordinate: touchCoordinate, identifier: "droppablePin")
         mapView.addAnnotation(annotation)
+        print(flickrURL(forApiKey: K.ApiKey, withAnnotation: annotation, andNumberOfPhotos: 10))
         let coordinateRegion = MKCoordinateRegion(center: touchCoordinate, latitudinalMeters: regionRadius / 3, longitudinalMeters: regionRadius / 3)
         mapView.setRegion(coordinateRegion, animated: true)
+        
+        retrieveURL(forAnnotation: annotation) { (true) in
+            print(self.imageUrlArray)
+        }
     }
     func removeProgressLbl () {
         if progressLabel != nil {
@@ -122,6 +138,21 @@ extension MapVC : MKMapViewDelegate {
             mapView.removeAnnotation(annotation)
         }
     }
+    func retrieveURL ( forAnnotation annotation : droppablePin, handler : @escaping (_ status: Bool)-> ()) {
+        imageUrlArray = []
+        AF.request(flickrURL(forApiKey: K.ApiKey, withAnnotation: annotation, andNumberOfPhotos: 10)).responseJSON { responce in
+            guard let json = responce.value as? Dictionary<String , AnyObject> else {return}
+            let photosDict = json["photos"] as! Dictionary<String , AnyObject>
+            let photosDictionaryArray = photosDict["photo"] as! [Dictionary<String,AnyObject>]
+            for photo in photosDictionaryArray {
+                let postURL = "https://live.staticflickr.com/\(photo["server"]!)/\(photo["id"]!)_\(photo["secret"]!)_c_d.jpg"
+                self.imageUrlArray.append(postURL)
+            }
+            handler(true)
+        }
+        
+    }
+    
 }
 extension MapVC : CLLocationManagerDelegate {
     func configureLocationServises (){
@@ -134,4 +165,19 @@ extension MapVC : CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         centerMapOnUserLocation()
     }
+}
+
+extension MapVC : UICollectionViewDelegate, UICollectionViewDataSource {
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return 4
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "photoCell", for: indexPath) as? PhotoCell
+        cell?.layer.backgroundColor = CGColor(red: 1, green: 0, blue: 0, alpha: 1)
+        return cell!
+        
+    }
+    
 }
