@@ -41,6 +41,7 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        citySearchTextField.delegate = self
         mapView.delegate = self
         locationManager.delegate = self
         weatherManager.delegate = self
@@ -142,6 +143,8 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         citySearch(withName: city)
         }
     }
+    
+    
 }
 
 extension MapVC : MKMapViewDelegate {
@@ -159,6 +162,7 @@ extension MapVC : MKMapViewDelegate {
         removeWeatherSymbol()
         removeTemperatureLabel()
         cancelAllSessions()
+       
         
         imageUrlArray = []
         imageArray = []
@@ -307,7 +311,12 @@ extension MapVC : UICollectionViewDelegate, UICollectionViewDataSource {
         return cell
         
     }
-    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let popVC = storyboard?.instantiateViewController(withIdentifier: "PopVC") as? PopVC else {return}
+        popVC.initData(forImage: imageArray[indexPath.row])
+        popVC.modalPresentationStyle = .fullScreen
+        present(popVC, animated: true,completion: nil)
+    }
 }
 
 extension MapVC : WeathermanagerDelegate {
@@ -316,7 +325,8 @@ extension MapVC : WeathermanagerDelegate {
             DispatchQueue.main.async {
                 self.temperatureLabel.text = weather.temperatureString
                 self.cityLabel.text = weather.cityName
-                self.weatherSymbol.image = UIImage(systemName: weather.conditionName)
+                self.weatherSymbol.image = UIImage(systemName: weather.conditionName)?.withTintColor(.black)
+                self.weatherSymbol.tintColor = .black
             }
         }
     
@@ -327,4 +337,23 @@ extension MapVC : WeathermanagerDelegate {
     
     
 }
-
+extension MapVC : UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        // Tell the keyboard where to go on next / go button.
+        if citySearchTextField.text != nil {
+            citySearch(withName: citySearchTextField.text!)
+            citySearchTextField.text = ""
+        }
+        citySearchTextField.resignFirstResponder()
+        return true
+    }
+    func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
+        if textField.text != ""{
+            return true
+        }else{
+            textField.placeholder = "Type the name of city"
+            return true
+        }
+    }
+}
