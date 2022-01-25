@@ -12,8 +12,9 @@ import Alamofire
 import AlamofireImage
 
 class MapVC: UIViewController, UIGestureRecognizerDelegate {
-
     
+    
+    @IBOutlet weak var citySearchTextField: UITextField!
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var mapViewBottomConstrain : NSLayoutConstraint!
     @IBOutlet weak var pullUpView : UIView!
@@ -22,30 +23,41 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
     let regionRadius = 7000.0
     var spinner : UIActivityIndicatorView!
     var progressLabel : UILabel!
-    
+    var weatherSymbol : UIImageView!
+    var cityLabel : UILabel!
+    var temperatureLabel : UILabel!
+    var weatherManager = WeatherManager()
     let screenSize = UIScreen.main.bounds
+    
     
     let flowLayout = UICollectionViewFlowLayout()
     var collectionView:UICollectionView?
     
     var imageUrlArray = [String] ()
+    var imageArray = [UIImage]()
+    var mapItems: [MKMapItem] = []
     
-  
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         mapView.delegate = self
         locationManager.delegate = self
+        weatherManager.delegate = self
         configureLocationServises()
         pinAddGesture()
-        collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: flowLayout)
+        pullUpView.backgroundColor = UIColor(named: "UIColor Orange")
+        
+        let collectionViewFrame = CGRect(x: 0 , y: 100, width: view.frame.width, height: view.frame.height/2)
+        
+        collectionView = UICollectionView(frame: collectionViewFrame, collectionViewLayout: flowLayout)
         collectionView?.register(PhotoCell.self , forCellWithReuseIdentifier: "photoCell")
         collectionView?.delegate = self
         collectionView?.dataSource = self
-        collectionView?.backgroundColor = .green
+        collectionView?.backgroundColor = UIColor(named: "UIColor Orange")
         pullUpView.addSubview(collectionView!)
     }
-
+    
     func pinAddGesture () {
         let pinAddGesture = UITapGestureRecognizer(target: self, action: #selector(dropPin(sender:)))
         pinAddGesture.numberOfTapsRequired = 1
@@ -66,6 +78,7 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         
     }
     @objc func animateViewDown(){
+        cancelAllSessions()
         mapViewBottomConstrain.constant = 0
         UIView.animate(withDuration: 0.3) {
             self.view.layoutIfNeeded()
@@ -77,7 +90,7 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         spinner.center = CGPoint(x: (screenSize.width / 2) - (spinner.frame.width / 2), y: 125)
         spinner.color = .gray
         spinner.startAnimating()
-        collectionView?.addSubview(spinner)
+        pullUpView.addSubview(spinner)
     }
     func removeSpinner () {
         if spinner != nil {
@@ -91,12 +104,43 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         progressLabel.textColor = UIColor.label
         progressLabel.textAlignment = .center
         progressLabel.text = "Loading Images!"
-        collectionView?.addSubview(progressLabel)
+        pullUpView.addSubview(progressLabel)
+    }
+    func addWeatherSymbol () {
+        weatherSymbol = UIImageView()
+        weatherSymbol.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+        weatherSymbol.contentMode = .scaleAspectFit
+        pullUpView.addSubview(weatherSymbol)
+    }
+    func addTemperatureLabel () {
+        temperatureLabel = UILabel()
+        temperatureLabel.frame = CGRect(x: 100, y: 0, width: 100, height: 100)
+        temperatureLabel.text = ""
+        temperatureLabel.font = UIFont(name: "Avenir", size: 40)
+        temperatureLabel.contentMode = .center
+        temperatureLabel.textAlignment = .center
+        pullUpView.addSubview(temperatureLabel)
+    }
+    func addCityNameLable () {
+        cityLabel = UILabel ()
+        cityLabel.frame = CGRect(x: 200, y: 0, width: 200, height: 100)
+        cityLabel.text = ""
+        cityLabel.font = UIFont(name: "Avenir", size: 21)
+        cityLabel.allowsDefaultTighteningForTruncation = true
+        pullUpView.addSubview(cityLabel)
+        
     }
     
     @IBAction func centerMapBtn(_ sender: UIButton) {
         
-            centerMapOnUserLocation()
+        centerMapOnUserLocation()
+    }
+    
+    @IBAction func searchForCity(_ sender: UIButton) {
+        if citySearchTextField.text != nil {
+        let city = citySearchTextField.text!
+        citySearch(withName: city)
+        }
     }
 }
 
@@ -106,10 +150,19 @@ extension MapVC : MKMapViewDelegate {
         let coordinateRegion = MKCoordinateRegion(center: coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
         mapView.setRegion(coordinateRegion, animated: true)
     }
+    
     @objc func dropPin (sender : UITapGestureRecognizer){
         removePin()
         removeProgressLbl()
         removeSpinner()
+        removeCitynameLabel()
+        removeWeatherSymbol()
+        removeTemperatureLabel()
+        cancelAllSessions()
+        
+        imageUrlArray = []
+        imageArray = []
+        collectionView?.reloadData()
         
         
         animateViewUp()
@@ -118,14 +171,26 @@ extension MapVC : MKMapViewDelegate {
         addProgressLbl()
         let touchPoint = sender.location(in: mapView)
         let touchCoordinate = mapView.convert(touchPoint, toCoordinateFrom: mapView)
+        weatherManager.fetchWeather(latitude: touchCoordinate.latitude, longitude: touchCoordinate.longitude)
+        addWeatherSymbol()
+        addTemperatureLabel()
+        addCityNameLable()
         let annotation = droppablePin(coordinate: touchCoordinate, identifier: "droppablePin")
         mapView.addAnnotation(annotation)
-        print(flickrURL(forApiKey: K.ApiKey, withAnnotation: annotation, andNumberOfPhotos: 10))
+        // print(flickrURL(forApiKey: K.ApiKey, withAnnotation: annotation, andNumberOfPhotos: 10))
         let coordinateRegion = MKCoordinateRegion(center: touchCoordinate, latitudinalMeters: regionRadius / 3, longitudinalMeters: regionRadius / 3)
         mapView.setRegion(coordinateRegion, animated: true)
         
-        retrieveURL(forAnnotation: annotation) { (true) in
-            print(self.imageUrlArray)
+        retrieveURL(forAnnotation: annotation) { (finished ) in
+            if finished {
+                self.retrieveImages(handler: {(finished) in
+                    if finished {
+                        self.removeProgressLbl()
+                        self.removeSpinner()
+                        self.collectionView?.reloadData()
+                    }
+                })
+            }
         }
     }
     func removeProgressLbl () {
@@ -138,9 +203,23 @@ extension MapVC : MKMapViewDelegate {
             mapView.removeAnnotation(annotation)
         }
     }
+    func removeWeatherSymbol () {
+        if weatherSymbol != nil {
+            weatherSymbol.removeFromSuperview()
+        }
+    }
+    func removeCitynameLabel (){
+        if cityLabel != nil {
+            cityLabel.removeFromSuperview()
+        }
+    }
+    func removeTemperatureLabel () {
+        if temperatureLabel != nil {
+            temperatureLabel.removeFromSuperview()
+        }
+    }
     func retrieveURL ( forAnnotation annotation : droppablePin, handler : @escaping (_ status: Bool)-> ()) {
-        imageUrlArray = []
-        AF.request(flickrURL(forApiKey: K.ApiKey, withAnnotation: annotation, andNumberOfPhotos: 10)).responseJSON { responce in
+        AF.request(flickrURL(forApiKey: K.ApiKey, withAnnotation: annotation, andNumberOfPhotos: 20)).responseJSON { responce in
             guard let json = responce.value as? Dictionary<String , AnyObject> else {return}
             let photosDict = json["photos"] as! Dictionary<String , AnyObject>
             let photosDictionaryArray = photosDict["photo"] as! [Dictionary<String,AnyObject>]
@@ -152,6 +231,52 @@ extension MapVC : MKMapViewDelegate {
         }
         
     }
+    
+    func retrieveImages (handler : @escaping (_ status : Bool)-> ()) {
+        for url in imageUrlArray {
+            AF.request(url).responseImage { responce in
+                guard let image = responce.value else{return}
+                self.imageArray.append(image)
+                self.progressLabel.text = "\(self.imageArray.count) of 20 images downloaded"
+                
+                if self.imageArray.count == self.imageUrlArray.count {
+                    handler(true)
+                }
+            }
+        }
+    }
+    
+    
+    func cancelAllSessions () {
+        Alamofire.Session.default.session.getTasksWithCompletionHandler { sessionTask, uploadData, downloadData in
+            sessionTask.forEach({$0.cancel()})
+            downloadData.forEach({$0.cancel()})
+        }
+    }
+    func citySearch (withName name : String) {
+        var lat = 0.0
+        var lon = 0.0
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = name
+        
+        let search = MKLocalSearch(request: searchRequest)
+        
+        search.start { response, error in
+            guard let response = response else {
+                print("Error: \(error?.localizedDescription ?? "Unknown error").")
+                return
+            }
+            for item in response.mapItems {
+                lat = item.placemark.coordinate.latitude
+                lon = item.placemark.coordinate.longitude
+                
+            }
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            let coordinateRegion = MKCoordinateRegion(center: coordinate, latitudinalMeters: self.regionRadius, longitudinalMeters: self.regionRadius)
+            self.mapView.setRegion(coordinateRegion, animated: true)
+        }
+    }
+    
     
 }
 extension MapVC : CLLocationManagerDelegate {
@@ -170,14 +295,36 @@ extension MapVC : CLLocationManagerDelegate {
 extension MapVC : UICollectionViewDelegate, UICollectionViewDataSource {
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 4
+        return imageArray.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "photoCell", for: indexPath) as? PhotoCell
-        cell?.layer.backgroundColor = CGColor(red: 1, green: 0, blue: 0, alpha: 1)
-        return cell!
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "photoCell", for: indexPath) as? PhotoCell else {return UICollectionViewCell ()}
+        let imageFromIndex = imageArray[indexPath.row]
+        let imageView = UIImageView(image: imageFromIndex)
+        imageView.contentMode = .scaleAspectFit
+        cell.addSubview(imageView)
+        return cell
         
     }
     
 }
+
+extension MapVC : WeathermanagerDelegate {
+    
+        func didUpdateWeather(_ weatherManager: WeatherManager,weather: WeatherModel) {
+            DispatchQueue.main.async {
+                self.temperatureLabel.text = weather.temperatureString
+                self.cityLabel.text = weather.cityName
+                self.weatherSymbol.image = UIImage(systemName: weather.conditionName)
+            }
+        }
+    
+    
+    func didFailWithError(error: Error) {
+        print (error)
+    }
+    
+    
+}
+

@@ -8,6 +8,7 @@
 import Foundation
 struct K {
     static let ApiKey = "7678bbcf1ba0faa0a79ecb7891aedb7b"
+    static let weatherApiKey = "3f4a49c38eacb97fcd4170702c9ea04a"
     
    
 }
